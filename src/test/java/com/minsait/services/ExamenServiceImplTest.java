@@ -5,9 +5,7 @@ import com.minsait.repositories.ExamenRepository;
 import com.minsait.repositories.PreguntaRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.Mockito;
+import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Collections;
@@ -25,6 +23,21 @@ class ExamenServiceImplTest {
     PreguntaRepository preguntaRepository;
     @InjectMocks
     ExamenServiceImpl service;
+
+    @Captor
+    ArgumentCaptor<Long> captor;
+
+    @Test
+    void testArgumentCaptor(){
+        when(examenRepository.findAll()).thenReturn(Datos.EXAMENES);
+        when(preguntaRepository.findPreguntasByExamenId(anyLong())).thenReturn(Datos.PREGUNTAS);
+
+        var examen = service.findExamenByNameWithQuestions("Quimica");
+
+        verify(preguntaRepository).findPreguntasByExamenId(captor.capture());
+
+        assertEquals(2, captor.getValue());
+    }
 
     @Test
     void findExamenByName() {
@@ -85,32 +98,41 @@ class ExamenServiceImplTest {
 
     @Test
     void testSaveExamenConPreguntas(){
-
         var examenConPreguntas = Datos.EXAMEN;
-        examenConPreguntas.setPreguntas(Datos.PREGUNTAS);
+        doAnswer(invocation -> {
+            Examen examen = invocation.getArgument(0);
+            examen.setId(3L);
+            return examen;
+        }).when(examenRepository).save(any(Examen.class));
 
-        Mockito.when(examenRepository.save(examenConPreguntas)).thenReturn(examenConPreguntas);
+        var examenConId = service.save(examenConPreguntas);
 
-        Examen examenGuardado = service.save(examenConPreguntas);
+        assertNotNull(examenConId.getId());
+        assertEquals(3, examenConId.getId());
+        assertEquals("Fisica", examenConId.getNombre());
+        verify(examenRepository).save(any());
+        verify(preguntaRepository, never()).savePreguntas(anyList());
 
-        assertNotNull(examenGuardado);
-        assertEquals(examenGuardado.getId(), examenGuardado.getId());
-        assertEquals(examenGuardado.getNombre(), examenGuardado.getNombre());
-        assertEquals(examenConPreguntas.getPreguntas(), examenGuardado.getPreguntas());
     }
 
     @Test
     void testSaveExamenSinPreguntas(){
 
         var examenSinPreguntas = Datos.EXAMEN;
+        examenSinPreguntas.setPreguntas(Datos.PREGUNTAS);
+        doAnswer(invocation -> {
+            Examen examen1 = invocation.getArgument(0);
+            examen1.setId(3L);
+            return examen1;
+        }).when(examenRepository).save(any(Examen.class));
 
-        Mockito.when(examenRepository.save(examenSinPreguntas)).thenReturn(examenSinPreguntas);
+        var examenConId = service.save(examenSinPreguntas);
 
-        Examen examenGuardado = service.save(examenSinPreguntas);
-
-        assertNotNull(examenGuardado);
-        assertEquals(examenSinPreguntas.getId(), examenGuardado.getId());
-        assertEquals(examenSinPreguntas.getNombre(), examenGuardado.getNombre());
-        assertTrue(examenGuardado.getPreguntas().isEmpty());
+        assertNotNull(examenConId.getId());
+        assertEquals(3, examenConId.getId());
+        assertEquals("Fisica", examenConId.getNombre());
+        assertTrue(examenConId.getPreguntas().size() > 0);
+        verify(examenRepository).save(any());
+        verify(preguntaRepository).savePreguntas(anyList());
     }
 }
