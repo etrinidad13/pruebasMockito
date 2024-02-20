@@ -99,6 +99,7 @@ class ExamenServiceImplTest {
     @Test
     void testSaveExamenConPreguntas(){
         var examenConPreguntas = Datos.EXAMEN;
+        examenConPreguntas.setPreguntas(Datos.PREGUNTAS);
         doAnswer(invocation -> {
             Examen examen = invocation.getArgument(0);
             examen.setId(3L);
@@ -110,8 +111,9 @@ class ExamenServiceImplTest {
         assertNotNull(examenConId.getId());
         assertEquals(3, examenConId.getId());
         assertEquals("Fisica", examenConId.getNombre());
+        assertTrue(examenConId.getPreguntas().size() > 0);
         verify(examenRepository).save(any());
-        verify(preguntaRepository, never()).savePreguntas(anyList());
+        verify(preguntaRepository).savePreguntas(anyList());
 
     }
 
@@ -119,20 +121,18 @@ class ExamenServiceImplTest {
     void testSaveExamenSinPreguntas(){
 
         var examenSinPreguntas = Datos.EXAMEN;
-        examenSinPreguntas.setPreguntas(Datos.PREGUNTAS);
         doAnswer(invocation -> {
             Examen examen1 = invocation.getArgument(0);
             examen1.setId(3L);
             return examen1;
-        }).when(examenRepository).save(any(Examen.class));
+        }).when(examenRepository).save(examenSinPreguntas);
 
         var examenConId = service.save(examenSinPreguntas);
 
         assertNotNull(examenConId.getId());
         assertEquals(3, examenConId.getId());
         assertEquals("Fisica", examenConId.getNombre());
-        assertTrue(examenConId.getPreguntas().size() > 0);
         verify(examenRepository).save(any());
-        verify(preguntaRepository).savePreguntas(anyList());
+        verify(preguntaRepository, never()).savePreguntas(anyList());
     }
 }
